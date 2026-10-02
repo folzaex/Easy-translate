@@ -1,10 +1,18 @@
-# EasyTranslate v2
+# EasyTranslate v3
 
-Mobile-first English <-> German translation using Transformers.js and Xenova OPUS-MT models in the browser.
+Deutsch ↔ English Übersetzung direkt im Browser – ohne API-Key, ohne kostenpflichtige Übersetzungs-API und ohne eigenen Server.
 
-## Important
-Do not open `index.html` directly with `file://` on iPhone/Safari. The browser needs an HTTPS origin for the browser ML stack and model downloads.
+## V3 – iPhone/Safari-Stabilität
 
-Deploy this folder as a static site on any HTTPS host, e.g. Vercel. No API key is required and there is no paid translation API.
+V3 deaktiviert WebGPU bewusst und nutzt für die Übersetzung **WASM/CPU mit Q4**. Das vermeidet die Safari-WebContent-Abstürze, die bei WebGPU auf manchen iPhones auftreten können.
 
-The app prefers WebGPU when available and uses a quantized q4 model, with a WASM fallback. Models are cached by the browser after the first download.
+Die App muss über HTTPS geöffnet werden (z. B. Vercel). Beim ersten Übersetzen werden die benötigten Modelldateien aus dem Hugging-Face-Modellrepository geladen und anschließend vom Browser gecacht.
+
+## Deployment
+
+Die Dateien `index.html` und `vercel.json` können in das bestehende GitHub-Repository `Easy-translate` kopiert/ersetzt werden. Vercel übernimmt die neue Version anschließend automatisch.
+
+## Modelle
+
+- `Xenova/opus-mt-de-en`
+- `Xenova/opus-mt-en-de`
