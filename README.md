@@ -1,4 +1,3 @@
-# EasyTranslate V8
-iPhone-Test mit serverseitigem Proxy und Lingva.
-Kein lokales KI-Modell, kein eigener API-Key.
-Die öffentlichen Lingva-Instanzen sind kostenlose Drittanbieter-Endpunkte; Verfügbarkeit und Limits sind nicht garantiert.
+# EasyTranslate V9
+Testversion mit serverseitigem Vercel-Proxy und mehreren öffentlichen Lingva-Instanzen.
+Lingva dokumentiert REST v1 als GET und POST ohne Authentifizierung.

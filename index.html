@@ -2,68 +2,46 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>EasyTranslate V8</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EasyTranslate V9</title>
 <style>
 *{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f7fb;color:#172033}
 main{max-width:760px;margin:auto;padding:24px 16px 40px}h1{margin:0 0 6px;font-size:30px}.sub{color:#647084;margin-bottom:22px}
 .card{background:#fff;border-radius:18px;padding:16px;margin-bottom:14px;box-shadow:0 4px 18px rgba(0,0,0,.06)}
-.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}select{width:100%;padding:12px;border:1px solid #d7dce5;border-radius:12px;background:#fff;font:inherit}
-.swap{flex:0 0 auto;border:0;border-radius:12px;padding:13px;background:#eef1f6;font:inherit}
-textarea{width:100%;min-height:180px;resize:vertical;border:1px solid #d7dce5;border-radius:12px;padding:14px;line-height:1.5;font:inherit}
-button.primary{width:100%;border:0;border-radius:12px;padding:13px 16px;background:#111827;color:#fff;font:inherit;font-weight:700;margin-top:10px}
-button.secondary{border:0;border-radius:12px;padding:13px 16px;background:#eef1f6;color:#182235;font:inherit}
-#status{margin-top:12px;color:#647084;font-size:14px;min-height:20px}#out{background:#f8fafc;min-height:180px;white-space:pre-wrap}
+.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}
+select,textarea,button{font:inherit}select{width:100%;padding:12px;border:1px solid #d7dce5;border-radius:12px;background:#fff}
+.swap,.secondary{border:0;border-radius:12px;padding:13px;background:#eef1f6;color:#182235}.swap{flex:0 0 auto}
+textarea{width:100%;min-height:180px;resize:vertical;border:1px solid #d7dce5;border-radius:12px;padding:14px;line-height:1.5}
+.primary{width:100%;border:0;border-radius:12px;padding:13px 16px;background:#111827;color:#fff;font-weight:700;margin-top:10px}
+#status{margin-top:12px;color:#647084;font-size:14px;min-height:20px}#out{background:#f8fafc;white-space:pre-wrap}
 .note{font-size:13px;color:#667085;line-height:1.45}
 </style>
 </head>
 <body>
 <main>
-<h1>EasyTranslate</h1>
-<div class="sub">V8 – kostenloser iPhone-Test</div>
+<h1>EasyTranslate</h1><div class="sub">V9 – kostenloser iPhone-Test</div>
 <div class="card"><div class="row">
 <select id="from"><option value="de">Deutsch</option><option value="en">English</option></select>
 <button class="swap" id="swap" type="button">⇄</button>
 <select id="to"><option value="en">English</option><option value="de">Deutsch</option></select>
 </div></div>
 <div class="card">
-<textarea id="input" placeholder="Text eingeben …">Hallo, wie geht es dir heute?</textarea>
+<textarea id="input">Hallo, wie geht es dir heute?</textarea>
 <button class="primary" id="translate">Übersetzen</button>
 <div id="status"></div>
 </div>
-<div class="card">
-<textarea id="out" readonly placeholder="Übersetzung …"></textarea>
-<button class="secondary" id="copy" type="button" style="margin-top:10px">Übersetzung kopieren</button>
-</div>
-<div class="card note">Diese Testversion lädt kein Übersetzungsmodell auf das iPhone. Die Anfrage läuft über eine Vercel-Funktion zu einer öffentlich verfügbaren Lingva-Instanz. Es wird kein API-Key und keine Kreditkarte benötigt. Öffentliche Instanzen können sich ändern oder ausfallen.</div>
+<div class="card"><textarea id="out" readonly placeholder="Übersetzung …"></textarea>
+<button class="secondary" id="copy" type="button" style="margin-top:10px">Übersetzung kopieren</button></div>
+<div class="card note">Kein lokales Modell, kein API-Key und keine Kreditkarte. Die kostenlose Übersetzung läuft über eine öffentliche Lingva-Instanz. Die Verfügbarkeit solcher Drittanbieter-Instanzen kann sich ändern.</div>
 <script>
 const $=id=>document.getElementById(id);
-$("swap").onclick=()=>{const a=$("from").value,b=$("to").value;$("from").value=b;$("to").value=a;};
-function splitText(text,max=1200){
- const out=[]; let rest=text.trim();
- while(rest.length>max){
-   let cut=rest.lastIndexOf("\\n",max);
-   if(cut<300) cut=rest.lastIndexOf(". ",max);
-   if(cut<300) cut=rest.lastIndexOf(" ",max);
-   if(cut<1) cut=max;
-   out.push(rest.slice(0,cut+1).trim()); rest=rest.slice(cut+1).trim();
- }
- if(rest) out.push(rest); return out;
-}
+$("swap").onclick=()=>{let a=$("from").value,b=$("to").value;$("from").value=b;$("to").value=a};
+function splitText(t,max=900){let a=[],r=t.trim();while(r.length>max){let c=r.lastIndexOf("\n",max);if(c<250)c=r.lastIndexOf(". ",max);if(c<250)c=r.lastIndexOf(" ",max);if(c<1)c=max;a.push(r.slice(0,c+1).trim());r=r.slice(c+1).trim()}if(r)a.push(r);return a}
 $("translate").onclick=async()=>{
- const text=$("input").value.trim(); if(!text){$("status").textContent="Bitte zuerst einen Text eingeben.";return;}
- const from=$("from").value,to=$("to").value; $("translate").disabled=true;$("out").value="";
- try{
-   const parts=splitText(text), result=[];
-   for(let i=0;i<parts.length;i++){
-     $("status").textContent=`Übersetze Abschnitt ${i+1} von ${parts.length} …`;
-     const r=await fetch("/api/translate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:parts[i],source:from,target:to})});
-     const d=await r.json(); if(!r.ok) throw new Error(d.error||"Übersetzung fehlgeschlagen");
-     result.push(d.translation);
-   }
-   $("out").value=result.join("\\n\\n"); $("status").textContent="Fertig.";
- }catch(e){$("status").textContent="Fehler: "+e.message;}
- finally{$("translate").disabled=false;}
+ let text=$("input").value.trim();if(!text){$("status").textContent="Bitte Text eingeben.";return}
+ let source=$("from").value,target=$("to").value;$("translate").disabled=true;$("out").value="";
+ try{let parts=splitText(text),res=[];for(let i=0;i<parts.length;i++){ $("status").textContent=`Übersetze Abschnitt ${i+1} von ${parts.length} …`;let r=await fetch("/api/translate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:parts[i],source,target})});let d=await r.json();if(!r.ok)throw Error(d.error||"Übersetzung fehlgeschlagen");res.push(d.translation)}$("out").value=res.join("\n\n");$("status").textContent="Fertig."}
+ catch(e){$("status").textContent="Fehler: "+e.message}finally{$("translate").disabled=false}
 };
 $("copy").onclick=async()=>{try{await navigator.clipboard.writeText($("out").value);$("status").textContent="Übersetzung kopiert."}catch(e){$("status").textContent="Kopieren nicht möglich."}};
 </script>

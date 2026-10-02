@@ -1,30 +1,38 @@
 export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
-  try {
-    const { text, source, target } = req.body || {};
-    if (!text || !source || !target) return res.status(400).json({ error: "Fehlende Angaben" });
-    if (!["de","en"].includes(source) || !["de","en"].includes(target))
-      return res.status(400).json({ error: "Nur Deutsch und Englisch werden unterstützt." });
-    if (source === target) return res.status(200).json({ translation: text });
+  if (req.method !== "POST") return res.status(405).json({error:"Method not allowed"});
+  const {text, source, target} = req.body || {};
+  if (!text || !source || !target) return res.status(400).json({error:"Fehlende Angaben"});
+  if (!["de","en"].includes(source) || !["de","en"].includes(target))
+    return res.status(400).json({error:"Nur Deutsch und Englisch."});
+  if (source === target) return res.status(200).json({translation:text});
 
-    const hosts = [
-      "https://lingva.ml",
-      "https://translate.igna.rocks",
-      "https://translate.plausibility.cloud"
-    ];
-    let last = "Übersetzungsdienst nicht erreichbar.";
-    for (const host of hosts) {
-      try {
-        const url = `${host}/api/v1/${source}/${target}/${encodeURIComponent(text)}`;
-        const r = await fetch(url, { headers: { "User-Agent": "EasyTranslate/8" } });
-        if (!r.ok) { last = `Dienst antwortete mit ${r.status}.`; continue; }
-        const data = await r.json();
-        if (data && data.translation) return res.status(200).json({ translation: data.translation });
-        last = data?.error || "Keine Übersetzung erhalten.";
-      } catch (e) { last = e?.message || last; }
+  // Lingva documents both GET and POST REST v1. We use POST first.
+  const hosts = [
+    "https://lingva.ml",
+    "https://translate.igna.rocks",
+    "https://translate.plausibility.cloud",
+    "https://translate.dr460nf1r3.org"
+  ];
+  let errors=[];
+  for (const host of hosts) {
+    try {
+      const post = await fetch(`${host}/api/v1/${source}/${target}`, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({query:text})
+      });
+      const pdata = await post.json().catch(()=>null);
+      if (post.ok && pdata?.translation) return res.status(200).json({translation:pdata.translation});
+
+      // Fallback to the documented GET endpoint for this instance.
+      const get = await fetch(`${host}/api/v1/${source}/${target}/${encodeURIComponent(text)}`);
+      const gdata = await get.json().catch(()=>null);
+      if (get.ok && gdata?.translation) return res.status(200).json({translation:gdata.translation});
+
+      errors.push(`${host}: ${post.status}/${get.status}`);
+    } catch(e) {
+      errors.push(`${host}: ${e?.message || "network error"}`);
     }
-    return res.status(502).json({ error: last });
-  } catch (e) {
-    return res.status(500).json({ error: "Technischer Fehler bei der Übersetzung." });
   }
+  return res.status(502).json({error:"Keine der kostenlosen Lingva-Instanzen hat geantwortet. "+errors.join(" | ")});
 }
