@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>EasyTranslate – Deutsch ↔ English</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#111827;background:#f5f7fb}
+*{box-sizing:border-box}body{margin:0;min-height:100vh}main{max-width:1050px;margin:auto;padding:20px 16px 36px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.brand{font-size:23px;font-weight:800;letter-spacing:-.4px}.privacy{font-size:12px;color:#64748b;background:#fff;padding:8px 10px;border-radius:999px;border:1px solid #e5e7eb}.hero{margin:18px 0 20px}.hero h1{font-size:30px;line-height:1.1;margin:0 0 8px}.hero p{margin:0;color:#64748b}.controls{display:flex;gap:10px;align-items:center;justify-content:center;margin-bottom:14px}.lang{border:1px solid #d8dee9;background:#fff;border-radius:12px;padding:11px 15px;font-weight:700;font-size:15px;min-width:145px}.swap{width:44px;height:44px;border:1px solid #d8dee9;background:#fff;border-radius:12px;font-size:20px;cursor:pointer}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.card{background:#fff;border:1px solid #e3e8f0;border-radius:18px;overflow:hidden;box-shadow:0 6px 22px rgba(15,23,42,.05)}.cardhead{padding:13px 15px;border-bottom:1px solid #edf0f5;display:flex;justify-content:space-between;align-items:center;font-weight:700}.textarea{width:100%;height:330px;border:0;outline:0;resize:vertical;padding:16px;font:16px/1.55 inherit;color:#111827}.output{height:330px;overflow:auto;padding:16px;white-space:pre-wrap;font:16px/1.55 inherit}.placeholder{color:#94a3b8}.actions{display:flex;gap:10px;align-items:center;margin:14px 0}.primary{flex:1;border:0;border-radius:13px;background:#111827;color:#fff;padding:14px 18px;font-weight:750;font-size:16px;cursor:pointer}.primary:disabled{opacity:.5;cursor:not-allowed}.secondary{border:1px solid #d8dee9;background:#fff;border-radius:13px;padding:12px 15px;cursor:pointer}.status{font-size:13px;color:#64748b;min-height:20px}.progress{height:4px;background:#e8edf4;border-radius:9px;overflow:hidden;margin-top:8px}.bar{height:100%;width:0;background:#111827;transition:width .2s}.foot{margin-top:18px;font-size:12px;color:#94a3b8;text-align:center}.error{color:#b91c1c}.success{color:#166534}@media(max-width:720px){main{padding:14px 12px 28px}.hero h1{font-size:26px}.grid{grid-template-columns:1fr}.textarea,.output{height:240px}.controls{margin-bottom:10px}.lang{min-width:0;flex:1}.privacy{display:none}.actions{position:sticky;bottom:8px;background:#f5f7fb;padding-top:6px}}
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><div class="brand">EasyTranslate</div><div class="privacy">🔒 Übersetzung lokal auf deinem Gerät</div></div>
+  <section class="hero"><h1>Deutsch ↔ English</h1><p>Zusammenhängende Texte übersetzen – ohne API-Key und ohne Übersetzungskosten.</p></section>
+  <div class="controls">
+    <select id="source" class="lang"><option value="de">🇩🇪 Deutsch</option><option value="en">🇬🇧 English</option></select>
+    <button id="swap" class="swap" aria-label="Sprachen tauschen">⇄</button>
+    <select id="target" class="lang"><option value="en">🇬🇧 English</option><option value="de">🇩🇪 Deutsch</option></select>
+  </div>
+  <div class="grid">
+    <section class="card"><div class="cardhead"><span id="sourceLabel">Deutsch</span><button class="secondary" id="clear">Löschen</button></div><textarea id="input" class="textarea" placeholder="Text hier eingeben oder einfügen …"></textarea></section>
+    <section class="card"><div class="cardhead"><span id="targetLabel">English</span><button class="secondary" id="copy">Kopieren</button></div><div id="output" class="output"><span class="placeholder">Die Übersetzung erscheint hier.</span></div></section>
+  </div>
+  <div class="actions"><button id="translate" class="primary">Übersetzen</button></div>
+  <div class="status" id="status">Beim ersten Mal wird das Übersetzungsmodell einmalig geladen.</div><div class="progress"><div class="bar" id="bar"></div></div>
+  <div class="foot">Keine kostenpflichtige API. Keine Kreditkarte. Die Übersetzung wird im Browser ausgeführt.</div>
+</main>
+<script type="module">
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1';
+env.allowLocalModels = false;
+env.useBrowserCache = true;
+
+const $ = id => document.getElementById(id);
+
+if (location.protocol === 'file:') {
+  document.body.innerHTML = `<main style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;padding:24px;max-width:700px;margin:auto"><h1>EasyTranslate</h1><div style="padding:18px;border:1px solid #f59e0b;border-radius:16px;background:#fffbeb"><h2 style="margin-top:0">Diese Datei wurde direkt geöffnet.</h2><p>Für die Übersetzung muss EasyTranslate über eine HTTPS-Webadresse geöffnet werden. Safari blockiert beim direkten Öffnen einer HTML-Datei einige Browser-Funktionen, die das Übersetzungsmodell benötigt.</p><p><strong>Die App selbst ist nicht kaputt.</strong> Bitte die Dateien auf Vercel oder einen anderen HTTPS-Webhost laden und anschließend den dortigen Link auf dem iPhone öffnen.</p></div></main>`;
+  throw new Error('EasyTranslate requires HTTPS; local file:// mode is not supported.');
+}
+const source=$('source'), target=$('target'), input=$('input'), output=$('output'), status=$('status'), bar=$('bar');
+let translator=null, activeModel=null;
+const models={
+ 'de-en':'Xenova/opus-mt-de-en',
+ 'en-de':'Xenova/opus-mt-en-de'
+};
+function labels(){
+ $('sourceLabel').textContent=source.value==='de'?'Deutsch':'English';
+ $('targetLabel').textContent=target.value==='de'?'Deutsch':'English';
+}
+labels(); source.onchange=()=>{if(source.value===target.value) target.value=source.value==='de'?'en':'de';labels()}; target.onchange=()=>{if(source.value===target.value) source.value=target.value==='de'?'en':'de';labels()};
+$('swap').onclick=()=>{const x=source.value;source.value=target.value;target.value=x;const t=input.value;input.value=output.innerText||'';output.innerHTML=t?escapeHtml(t).replace(/\n/g,'<br>'):'<span class="placeholder">Die Übersetzung erscheint hier.</span>';labels()};
+$('clear').onclick=()=>{input.value='';output.innerHTML='<span class="placeholder">Die Übersetzung erscheint hier.</span>';status.textContent='Bereit.';bar.style.width='0%'};
+$('copy').onclick=async()=>{const t=output.innerText.trim();if(!t)return;await navigator.clipboard.writeText(t);status.textContent='Übersetzung kopiert.';status.className='status success'};
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+function splitText(text,max=1100){
+  const paragraphs=text.replace(/\r\n/g,'\n').split(/\n{2,}/);
+  const chunks=[];
+  for(const p of paragraphs){
+    if(!p.trim()){chunks.push('');continue;}
+    let rest=p.trim();
+    while(rest.length>max){
+      let cut=-1; const candidates=['. ','! ','? ','; ','。','！','？'];
+      for(const sep of candidates){const i=rest.lastIndexOf(sep,max);if(i>cut)cut=i+sep.length;}
+      if(cut<Math.floor(max*.55)) cut=rest.lastIndexOf(' ',max);
+      if(cut<1) cut=max;
+      chunks.push(rest.slice(0,cut).trim()); rest=rest.slice(cut).trim();
+    }
+    if(rest) chunks.push(rest);
+  }
+  return chunks;
+}
+async function getTranslator(){
+ const key=source.value+'-'+target.value;
+ if(translator && activeModel===key)return translator;
+ activeModel=key; translator=null;
+ status.textContent='Übersetzungsmodell wird geladen … Beim ersten Mal kann das etwas dauern.';bar.style.width='5%';
+ const preferWebGPU = !!(navigator.gpu);
+ const options = {dtype:'q4'};
+ if (preferWebGPU) options.device='webgpu';
+ translator=await pipeline('translation',models[key],options).catch(async()=>{ delete options.device; return pipeline('translation',models[key],options); });
+ bar.style.width='20%'; return translator;
+}
+$('translate').onclick=async()=>{
+ const text=input.value.trim(); if(!text){status.textContent='Bitte zuerst einen Text eingeben.';return;}
+ const btn=$('translate');btn.disabled=true;status.className='status';
+ try{
+  const tr=await getTranslator();
+  const chunks=splitText(text); const results=[];
+  for(let i=0;i<chunks.length;i++){
+   if(!chunks[i]){results.push('');continue;}
+   status.textContent=`Übersetze Abschnitt ${i+1} von ${chunks.filter(Boolean).length} …`;
+   const r=await tr(chunks[i],{max_new_tokens:512});
+   results.push(Array.isArray(r)?r[0].translation_text:r.translation_text);
+   bar.style.width=`${20+Math.round(((i+1)/chunks.length)*75)}%`;
+  }
+  output.textContent=results.join('\n\n'); status.textContent='Übersetzung abgeschlossen. Die Verarbeitung erfolgte lokal im Browser.';status.className='status success';bar.style.width='100%';
+ }catch(e){console.error(e);output.innerHTML='<span class="error">Die Übersetzung konnte nicht gestartet werden. Bitte Seite neu laden und erneut versuchen.</span>';status.textContent='Fehler: '+(e?.message||e);status.className='status error';bar.style.width='0%';}
+ btn.disabled=false;
+};
+</script>
+</body>
+</html>
