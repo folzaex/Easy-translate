@@ -1,4 +1,4 @@
-# EasyTranslate V7
-iPhone-Test ohne lokales Übersetzungsmodell.
-Deployment: GitHub + Vercel.
-Hinweis: Diese Version nutzt den externen MyMemory-Dienst. Die kostenlose Nutzung ist kontingentiert; vor produktivem Einsatz sollten aktuelle Limits und Nutzungsbedingungen geprüft werden.
+# EasyTranslate V8
+iPhone-Test mit serverseitigem Proxy und Lingva.
+Kein lokales KI-Modell, kein eigener API-Key.
+Die öffentlichen Lingva-Instanzen sind kostenlose Drittanbieter-Endpunkte; Verfügbarkeit und Limits sind nicht garantiert.
